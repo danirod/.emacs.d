@@ -1,0 +1,236 @@
+#+title:  Dani's init.org
+#+author: danirod
+#+date:   2021-10-13
+
+* Introduction
+
+This is the configuration files for my GNU Emacs distribution. Apparently,
+you can use org-mode to do literate programming, so I'm using org-mode to
+write my init.el! 😊
+
+This will allow me to document my learnings and discoveries about GNU Emacs
+as a long term Vim user. Nothing wrong with Vim, but I wanted to see what is
+in the other side of the wall!
+
+* Package managers
+
+There are a lot of packages in ELPA (Emacs Lisp Package Manager):
+<https://elpa.gnu.org>. There are additional packages in MELPA, another
+package repository: <https://melpa.org>. Many new features can be added to
+GNU Emacs using a package manager, such as support for state of the art
+technologies like prettier or eslint, project managers, RSS readers and more.
+
+Here is where I add MELPA to the list of package repositories and initialise
+the package system.
+
+#+BEGIN_SRC emacs-lisp
+  (require 'package)
+
+  (setq package-archives
+        '(("GNU ELPA" . "https://elpa.gnu.org/packages/")
+          ("MELPA Stable" . "https://stable.melpa.org/packages/")
+          ("MELPA" . "https://melpa.org/packages/"))
+
+        package-archive-priorities
+        '(("MELPA Stable" . 30)
+          ("MELPA" . 20)
+          ("GNU ELPA" . 10))
+
+        package-enable-at-startup nil)
+
+  (package-initialize)
+#+END_SRC
+
+The following piece of code will make sure that use-package is present. The
+cool thing about use-package is that it automatically installs packages if
+they were not installed, which is good if I want to install this
+configuration file in a new (or an old) computer.
+
+#+BEGIN_SRC emacs-lisp
+  (unless (package-installed-p 'use-package)
+    (package-refresh-contents)
+    (package-install 'use-package))
+#+END_SRC
+
+Combined with the =package-enable-at-startup= option set to nil previously,
+this will allow me to manually startup packages using =use-package=. The cool
+part about =use-package= is that when you call the primitive, you can also
+pass configurations, binds, commands... so everything will stay together.
+
+* Basic configuration
+
+Use tango-dark by default.
+
+#+BEGIN_SRC emacs-lisp
+  (load-theme 'tango-dark)
+#+END_SRC
+
+Most of the time I'll be using GNU Emacs as a graphical application run
+inside a window manager or using a real window in Microsoft Windows or
+macOS. However, it is possible to use the command line version too when using
+=emacs -nw= to start GNU Emacs or if the system doesn't have a GUI (say, too
+lazy to start my window manager when running FreeBSD). Therefore, it makes
+sense to wrap some of the configurations in a test that asserts that I'm
+really using a graphical system.
+
+#+BEGIN_SRC emacs-lisp
+  (when window-system
+    (set-frame-size (selected-frame) 150 40)
+    (set-frame-font "DejaVu Sans Mono 10" nil t)
+    (tool-bar-mode -1)
+    (scroll-bar-mode -1)
+
+    ;; nord-theme will require more colors. enable it in GUI mode.
+    (use-package nord-theme :ensure t :init (load-theme 'nord t)))
+#+END_SRC
+
+Some people like to hide the menubar too in graphical mode. I won't do at the moment because I use it to cheat and get the mnemonics if I forget a key binding.
+
+In regards to the coding experience, one of the things that are a must
+if I want to play with GNU Emacs is relative line numbering.
+
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'prog-mode-hook 'display-line-numbers-mode)
+  (setq display-line-numbers-type 'relative)
+#+END_SRC
+
+* Org-mode configuration
+
+For some reason some defaults do not usually apply to org-mode...
+
+#+BEGIN_SRC emacs-lisp
+  (use-package org
+    :hook ((org-mode . auto-fill-mode)
+           (org-mode . org-indent-mode)))
+#+END_SRC
+
+* Language support
+
+Some programming languages are still not supported out of the box.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package typescript-mode
+    :ensure t
+    :defer t)
+#+END_SRC
+  
+* Language servers
+
+Let's go to the beefy thing here. LSP. A must. I am going to use lsp-mode.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package lsp-mode
+    :ensure t
+    :after typescript-mode
+    :init
+    (setq lsp-keymap-prefix "C-c l")
+    :hook ((javascript-mode . lsp)
+           (typescript-mode . lsp)
+           (ruby-mode . lsp)))
+#+END_SRC
+
+The following are the LSP servers that I am interested in:
+
+- For TypeScript and JavaScript, =typescript-language-server= (formerly theia-ide, it wraps Microsoft's tsserver).
+- For Ruby, =solargraph= (it keeps getting better, just make sure to have it installed and with the docs generated).
+
+To complete, I'll be using complete-mode:
+
+#+BEGIN_SRC emacs-lisp
+  (use-package company
+    :ensure t
+    :hook ((after-init-hook . global-company-mode)))
+#+END_SRC
+
+* Extra packages
+
+** Editorconfig
+
+Used for consistency between projects.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package editorconfig
+    :ensure t
+    :config
+    (editorconfig-mode 1))
+#+END_SRC
+
+** Projectile
+
+Projectile is a tool for interacting with projects. I use it to manage the different stuff I work with.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package projectile
+    :ensure t
+    :defer t
+    :config
+    (projectile-mode +1)
+    (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map))
+#+END_SRC
+
+I spend so many time in Ruby on Rails that this is worth:
+
+#+BEGIN_SRC emacs-lisp
+  (use-package projectile-rails
+    :ensure t
+    :after projectile
+    :config
+    (projectile-rails-global-mode)
+    (define-key projectile-rails-mode-map (kbd "C-c r") 'projectile-rails-command-map))
+#+END_SRC
+  
+** Magit
+
+Magit is a tool for interacting with Git that leverages the integrated VCS functionality present in GNU Emacs.
+Here is the manual: <https://magit.vc/manual/magit/>. Now I just have to... read it.
+   
+#+BEGIN_SRC emacs-lisp
+  (use-package magit
+    :ensure t
+    :defer t)
+#+END_SRC
+
+** Treemacs
+
+I've been informed about the existence of Neotree too. Treemacs and Neotree
+seem to have similar download numbers from MELPA. However, I discovered
+Treemacs a few hours before Neotree, so it won. It's just a tree view for
+files, okay? There is nothing fancy.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package treemacs
+    :ensure t
+    :defer t
+    :hook (after-init . treemacs)
+    :bind (:map global-map ("C-c t t" . treemacs)
+                ("C-c t C-" . treemacs-find-file)))
+#+END_SRC
+
+Treemacs integrates with Projectile:
+
+#+BEGIN_SRC emacs-lisp
+  (use-package treemacs-projectile
+    :ensure t
+    :after treemacs projectile)
+#+END_SRC
+
+Treemacs integrates with Magit:
+
+#+BEGIN_SRC emacs-lisp
+  (use-package treemacs-magit
+    :ensure t
+    :after treemacs magit)
+
+#+END_SRC
+
+** Elcord
+
+This is a funny one: Elcord integrates with the Discord Rich Presence system to present the file I am editing if I am connected to Discord.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package elcord
+    :ensure t
+    :defer t
+    :config
+    (elcord-mode))
+#+END_SRC

@@ -59,39 +59,67 @@ pass configurations, binds, commands... so everything will stay together.
 
 * Basic configuration
 
-Use tango-dark by default.
+One of the first things to do is to disable the welcome screen. I still feel
+welcomed anyway. Thanks a lot! If running =emacs= without an initial file
+(i.e. not =emacs whatever.rb=, this will start with a =*scratch*= buffer).
 
 #+BEGIN_SRC emacs-lisp
-  (load-theme 'tango-dark)
+  (setq inhibit-startup-screen t)
 #+END_SRC
 
-Most of the time I'll be using GNU Emacs as a graphical application run
-inside a window manager or using a real window in Microsoft Windows or
-macOS. However, it is possible to use the command line version too when using
-=emacs -nw= to start GNU Emacs or if the system doesn't have a GUI (say, too
-lazy to start my window manager when running FreeBSD). Therefore, it makes
-sense to wrap some of the configurations in a test that asserts that I'm
-really using a graphical system.
+It is important for me to differentiate between running GNU Emacs in a command
+line and GNU Emacs as a standalone graphical application in my window manager,
+given that sometimes I'm too lazy to even run =startx= in FreeBSD...
 
 #+BEGIN_SRC emacs-lisp
   (when window-system
-    (set-frame-size (selected-frame) 150 40)
-    (set-frame-font "DejaVu Sans Mono 10" nil t)
-    (tool-bar-mode -1)
-    (scroll-bar-mode -1)
-
-    ;; nord-theme will require more colors. enable it in GUI mode.
-    (use-package nord-theme :ensure t :init (load-theme 'nord t)))
+    (let* ((is-mac (eq system-type 'darwin))
+           (danirod/frame-font (if is-mac "Menlo 13" "DejaVu Sans Mono 10")))
+      (add-to-list 'initial-frame-alist '(width . 150))
+      (add-to-list 'initial-frame-alist '(height . 40))
+      (add-to-list 'initial-frame-alist (cons 'font danirod/frame-font))
+      (add-to-list 'default-frame-alist '(width . 150))
+      (add-to-list 'default-frame-alist '(height . 40))
+      (add-to-list 'default-frame-alist (cons 'font danirod/frame-font))
+      (tool-bar-mode -1)
+      (scroll-bar-mode -1)
+      (when is-mac
+        (setq mac-command-modifier 'meta
+              mac-option-modifier 'none))))
 #+END_SRC
 
-Some people like to hide the menubar too in graphical mode. I won't do at the moment because I use it to cheat and get the mnemonics if I forget a key binding.
+Also it is a good time to setup the theme, which is only enable when using
+a GUI, because it requires a lot of colors and I don't usually have a lot of
+colors in my terminal.
 
-In regards to the coding experience, one of the things that are a must
-if I want to play with GNU Emacs is relative line numbering.
+#+BEGIN_SRC emacs-lisp
+  (when window-system
+    (use-package nord-theme
+      :ensure t
+      :init (load-theme 'nord t)))
+#+END_SRC
+
+In regards to the coding experience, it is mandatory to have relative line
+numbers. Same story as Vim motions: how am I supposed to get the distance
+between two lines by just looking at the screen, I am not a supercomputer!
 
 #+BEGIN_SRC emacs-lisp
   (add-hook 'prog-mode-hook 'display-line-numbers-mode)
   (setq display-line-numbers-type 'relative)
+#+END_SRC
+
+Also rulers.
+
+#+BEGIN_SRC emacs-lisp
+  (add-hook 'prog-mode-hook 'display-fill-column-indicator-mode)
+#+END_SRC
+
+Also disable the backup files because I will usually have Git available to do
+that.
+
+#+BEGIN_SRC emacs-lisp
+  (setq make-backup-files nil
+        auto-save-default nil)
 #+END_SRC
 
 * Org-mode configuration
@@ -108,12 +136,34 @@ For some reason some defaults do not usually apply to org-mode...
 
 Some programming languages are still not supported out of the box.
 
+** TypeScript
+
 #+BEGIN_SRC emacs-lisp
   (use-package typescript-mode
     :ensure t
     :defer t)
 #+END_SRC
-  
+
+** YAML
+
+#+BEGIN_SRC emacs-lisp
+  (use-package yaml-mode
+    :ensure t
+    :defer t)
+#+END_SRC
+
+** Ruby
+
+Out of the box, but I'm using rbenv.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package rbenv
+    :ensure t
+    :defer t
+    :init (global-rbenv-mode)
+    :hook ((ruby-mode . rbenv-use-corresponding)))
+#+END_SRC
+
 * Language servers
 
 Let's go to the beefy thing here. LSP. A must. I am going to use lsp-mode.
@@ -121,25 +171,34 @@ Let's go to the beefy thing here. LSP. A must. I am going to use lsp-mode.
 #+BEGIN_SRC emacs-lisp
   (use-package lsp-mode
     :ensure t
-    :after typescript-mode
-    :init
-    (setq lsp-keymap-prefix "C-c l")
-    :hook ((javascript-mode . lsp)
-           (typescript-mode . lsp)
-           (ruby-mode . lsp)))
+    :init (setq lsp-keymap-prefix "C-c l")
+    :hook ((c-mode web-mode javascript-mode typescript-mode ruby-mode go-mode) . lsp)
+    :commands lsp)
 #+END_SRC
 
-The following are the LSP servers that I am interested in:
+I used to be a polyglot programmer, but I grew up. Now I am interested in way
+less programming languages, thus the amount of language servers I'll use is
+probably not too large. These are the language servers that I want:
 
-- For TypeScript and JavaScript, =typescript-language-server= (formerly theia-ide, it wraps Microsoft's tsserver).
-- For Ruby, =solargraph= (it keeps getting better, just make sure to have it installed and with the docs generated).
+- For C/C++, =clangd=.
+- For Ruby, =solargraph=.
+- For Go, they seem to prefer =gopls= for now.
+- For TypeScript and JavaScript, =typescript-language-server= (formely known
+  as =theia-ide=, it will wrap Microsoft's =tsserver=).
 
-To complete, I'll be using complete-mode:
+Also, enable lsp-ui so that I can autocomplete using company.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package lsp-ui
+    :ensure t
+    :after lsp-mode
+    :commands lsp-ui-mode)
+#+END_SRC
 
 #+BEGIN_SRC emacs-lisp
   (use-package company
     :ensure t
-    :hook ((after-init-hook . global-company-mode)))
+    :init (global-company-mode))
 #+END_SRC
 
 * Extra packages
@@ -151,86 +210,81 @@ Used for consistency between projects.
 #+BEGIN_SRC emacs-lisp
   (use-package editorconfig
     :ensure t
-    :config
-    (editorconfig-mode 1))
+    :init (editorconfig-mode 1))
 #+END_SRC
 
 ** Projectile
 
-Projectile is a tool for interacting with projects. I use it to manage the different stuff I work with.
+Projectile is a tool for interacting with projects. I use it to manage the
+different stuff I work with. I should note in this file the commands to
+add a new project, because once I add all my projects, I don't usually touch
+the project list very often.
 
 #+BEGIN_SRC emacs-lisp
   (use-package projectile
     :ensure t
-    :defer t
-    :config
-    (projectile-mode +1)
-    (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map))
+    :init (projectile-global-mode)
+    :bind (:map projectile-mode-map
+                ("C-c p" . projectile-command-map)))
 #+END_SRC
 
-I spend so many time in Ruby on Rails that this is worth:
+I spend so many time in Ruby on Rails that this is worth. It adds additional
+projectile actions such as spawning Rails servers, Rails consoles, Rails
+dbconsoles and so.
 
 #+BEGIN_SRC emacs-lisp
   (use-package projectile-rails
     :ensure t
     :after projectile
-    :config
-    (projectile-rails-global-mode)
-    (define-key projectile-rails-mode-map (kbd "C-c r") 'projectile-rails-command-map))
+    :init (projectile-rails-global-mode)
+    :bind (:map projectile-rails-mode-map
+                ("C-c r" . projectile-rails-command-map)))
 #+END_SRC
-  
+
 ** Magit
 
-Magit is a tool for interacting with Git that leverages the integrated VCS functionality present in GNU Emacs.
-Here is the manual: <https://magit.vc/manual/magit/>. Now I just have to... read it.
-   
+Magit is a tool for interacting with Git that leverages the integrated VCS
+functionality present in GNU Emacs.  Here is the manual:
+<https://magit.vc/manual/magit/>. Now I just have to... read it.
+
 #+BEGIN_SRC emacs-lisp
   (use-package magit
     :ensure t
-    :defer t)
+    :commands magit-status
+    :bind (("C-c g" . magit-status)
+           ("C-c M-g" . magit-dispatch-popup)))
 #+END_SRC
 
-** Treemacs
+TODO: Evaluate whether I want a git gutter similar to Vim.
 
-I've been informed about the existence of Neotree too. Treemacs and Neotree
-seem to have similar download numbers from MELPA. However, I discovered
-Treemacs a few hours before Neotree, so it won. It's just a tree view for
-files, okay? There is nothing fancy.
+** Neotree
 
-#+BEGIN_SRC emacs-lisp
-  (use-package treemacs
-    :ensure t
-    :defer t
-    :hook (after-init . treemacs)
-    :bind (:map global-map ("C-c t t" . treemacs)
-                ("C-c t C-" . treemacs-find-file)))
-#+END_SRC
-
-Treemacs integrates with Projectile:
+I initially tried to use Treemacs, but there are some glitches that disturb
+me (such as having a scratch window open if I want to autostart Treemacs).
+Therefore, I'm switching to Neotree instead. I don't think there is much
+different aside of the bugs...
 
 #+BEGIN_SRC emacs-lisp
-  (use-package treemacs-projectile
+  (use-package all-the-icons
+    :ensure t)
+  (use-package neotree
     :ensure t
-    :after treemacs projectile)
-#+END_SRC
-
-Treemacs integrates with Magit:
-
-#+BEGIN_SRC emacs-lisp
-  (use-package treemacs-magit
-    :ensure t
-    :after treemacs magit)
-
+    :after all-the-icons
+    :bind (("C-c t" . neotree-toggle))
+    :config (setq neo-theme (if window-system 'icons 'arrows)))
 #+END_SRC
 
 ** Elcord
 
-This is a funny one: Elcord integrates with the Discord Rich Presence system to present the file I am editing if I am connected to Discord.
+This is a funny one: Elcord integrates with the Discord Rich Presence system to
+present the file I am editing if I am connected to Discord. Not useful at work
+(I don't have Discord installed in my work computer and it would be probably
+not a good idea to reveal the file names I work with), but a nice addition at
+home while working on side projects.
 
 #+BEGIN_SRC emacs-lisp
   (use-package elcord
     :ensure t
-    :defer t
-    :config
-    (elcord-mode))
+    :init (elcord-mode))
 #+END_SRC
+

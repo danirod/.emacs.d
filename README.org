@@ -1,16 +1,49 @@
-#+title:  Dani's init.org
+#+title:  Dani's GNU Emacs config file
 #+author: danirod
-#+date:   2021-10-13
 
 * Introduction
 
-This is the configuration files for my GNU Emacs distribution. Apparently,
-you can use org-mode to do literate programming, so I'm using org-mode to
-write my init.el! 😊
+This is the configuration files for my GNU Emacs distribution. Apparently, you
+can use org-mode to do literate programming, so I'm using org-mode to write my
+init.el! 😊
 
-This will allow me to document my learnings and discoveries about GNU Emacs
-as a long term Vim user. Nothing wrong with Vim, but I wanted to see what is
-in the other side of the wall!
+This will allow me to document my learnings and discoveries about GNU Emacs as
+a long term Vim user. Nothing wrong with Vim, but I wanted to see what is in
+the other side of the wall!
+
+* The basics: some notes about surviving Emacs
+
+One of the reasons I delayed trying Emacs seriously is that I'm afraid about
+how hard it would be to pick the new shortcut bindings, after getting used to
+Vim for so many years. It turns out, it is not that difficult.
+
+The most important thing is knowing about CONTROL and about META. CONTROL is
+the CTRL key in the keyboard. META is usually the ALT key in the keyboard (on
+Mac keyboards, ALT is usually known as OPTION). Many terminals allow forwarding
+the META key to the application. Those that don't, it is possible to emulate
+META by pressing ESC.
+
+In Emacs keys are pressed in chords. Unlike Vim, there is no INSERT mode. If
+you press A in Emacs, you'll type "a" in your file. You have to use CONTROL and
+META chords to do actions. For instance, C-n means CONTROL+n, C-N means
+CONTROL+MAYUS+n. M-n means ALT+n, or "ESC n". Sometimes multiple keys have to
+be pressed in different combinations. For instance, "C-x C-s" means hold
+Control, press "x", keep Control pressed, now press "s".
+
+Important motions to remember:
+
+- C-x f: set fill width (characters per line).
+- M-q: format paragraph (causes to be reindented according to the fill width).
+
+Sometimes there is an universal argument:
+
+- It can be used to repeat the number of times to apply an operation.
+  For instance, =C-u 4 C-n= moves the cursor 4 lines below.
+- It can be used to provide parameters numerically, instead of using it
+  interactive, for instance, =C-u 72 C-x f= would automatically set the
+  fill width to 72 without asking for it.
+
+** TODO Describe motions
 
 * Package managers
 
@@ -31,10 +64,9 @@ the package system.
           ("MELPA Stable" . "https://stable.melpa.org/packages/")
           ("MELPA" . "https://melpa.org/packages/"))
 
-        package-archive-priorities
-        '(("MELPA Stable" . 30)
-          ("MELPA" . 20)
-          ("GNU ELPA" . 10))
+        package-archive-priorities '(("MELPA Stable" . 30)
+                                     ("MELPA" . 20)
+                                     ("GNU ELPA" . 10))
 
         package-enable-at-startup nil)
 
@@ -50,6 +82,8 @@ configuration file in a new (or an old) computer.
   (unless (package-installed-p 'use-package)
     (package-refresh-contents)
     (package-install 'use-package))
+
+  (setq use-package-always-ensure t)
 #+END_SRC
 
 Combined with the =package-enable-at-startup= option set to nil previously,
@@ -58,6 +92,8 @@ part about =use-package= is that when you call the primitive, you can also
 pass configurations, binds, commands... so everything will stay together.
 
 * Basic configuration
+
+** Appearance and aesthetics
 
 One of the first things to do is to disable the welcome screen. I still feel
 welcomed anyway. Thanks a lot! If running =emacs= without an initial file
@@ -71,21 +107,25 @@ It is important for me to differentiate between running GNU Emacs in a command
 line and GNU Emacs as a standalone graphical application in my window manager,
 given that sometimes I'm too lazy to even run =startx= in FreeBSD...
 
+The following piece of code will set some frame parameters only if the
+system is graphical. Note that I also make some design choices depending
+on whether I'm using a Mac or not.
+
 #+BEGIN_SRC emacs-lisp
   (when window-system
     (let* ((is-mac (eq system-type 'darwin))
-           (danirod/frame-font (if is-mac "Menlo 13" "DejaVu Sans Mono 10")))
-      (add-to-list 'initial-frame-alist '(width . 150))
-      (add-to-list 'initial-frame-alist '(height . 40))
-      (add-to-list 'initial-frame-alist (cons 'font danirod/frame-font))
-      (add-to-list 'default-frame-alist '(width . 150))
-      (add-to-list 'default-frame-alist '(height . 40))
-      (add-to-list 'default-frame-alist (cons 'font danirod/frame-font))
+           (frame-font (if is-mac "Menlo 12" "Dejau Sans Mono 10"))
+           (frame-params (list '(width . 150) '(height . 40)
+                               (cons 'font frame-font)
+                               '(fullscreen . maximized))))
+      (append frame-params initial-frame-alist)
+      (append frame-params default-frame-alist)
       (tool-bar-mode -1)
       (scroll-bar-mode -1)
       (when is-mac
-        (setq mac-command-modifier 'meta
-              mac-option-modifier 'none))))
+        (setq
+         mac-command-modifier 'meta
+         mac-option-modifier 'none))))
 #+END_SRC
 
 Also it is a good time to setup the theme, which is only enable when using
@@ -93,25 +133,57 @@ a GUI, because it requires a lot of colors and I don't usually have a lot of
 colors in my terminal.
 
 #+BEGIN_SRC emacs-lisp
-  (when window-system
-    (use-package nord-theme
-      :ensure t
-      :init (load-theme 'nord t)))
+  (use-package vs-light-theme
+    :when window-system
+    :init
+    (load-theme 'vs-light t))
 #+END_SRC
 
-In regards to the coding experience, it is mandatory to have relative line
-numbers. Same story as Vim motions: how am I supposed to get the distance
-between two lines by just looking at the screen, I am not a supercomputer!
+I don't know if this is the proper place to do this, but this is a
+purely cosmetic thing. The following modes will display the clock and
+time in the system.
+
+#+BEGIN_SRC emacs-lisp
+  (display-time-mode)
+  (display-battery-mode)
+#+END_SRC
+
+** Core settings
+
+Disable globally backup files. I will usually rely on a version control
+system to store previous versions of files, so these backup files are
+very annoying.
+
+As a side effect, I'm considering setting a different common directory
+to store things like this. I've done this with Vim because it allows me
+to store a bigger undolist, but I don't know yet if Emacs has this
+niceties.
+
+#+BEGIN_SRC emacs-lisp
+  (setq make-backup-files nil
+        auto-save-default nil)
+#+END_SRC
+
+Define a macro to automatically reload the init.el file. This is useful
+when I waste minutes trying out things.
+
+#+BEGIN_SRC emacs-lisp
+  (defun danirod/reconf-emacs ()
+    (interactive)
+    (load-file (expand-file-name "init.el" user-emacs-directory)))
+#+END_SRC
+
+** Programming
+
+In regards to the main topic: programming. Configure a few things in
+prog-mode-hook to make programming nicer:
 
 #+BEGIN_SRC emacs-lisp
   (add-hook 'prog-mode-hook 'display-line-numbers-mode)
-  (setq display-line-numbers-type 'relative)
-#+END_SRC
-
-Also rulers.
-
-#+BEGIN_SRC emacs-lisp
   (add-hook 'prog-mode-hook 'display-fill-column-indicator-mode)
+
+  ;; Relative numbers -- I don't know how to feel about it yet.
+  ;; (setq display-line-numbers-type 'relative)
 #+END_SRC
 
 Also disable the backup files because I will usually have Git available to do
@@ -122,14 +194,54 @@ that.
         auto-save-default nil)
 #+END_SRC
 
-* Org-mode configuration
+* Ivy
 
-For some reason some defaults do not usually apply to org-mode...
+Ivy and Counsel are packages that provide completions, menus and such.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package ivy
+    :init
+    (ivy-mode t)
+    :config
+    (setq ivy-use-virtual-buffers t
+          ivy-height 20))
+
+  (use-package counsel
+    :after ivy
+    :bind (("M-x" . counsel-M-x)
+           ("C-s" . swiper)
+           ("C-x C-f" . counsel-find-file)
+           ("C-c C-t" . counsel-git-grep)
+           ("C-x C-j" . counsel-file-jump)))
+#+END_SRC
+
+* Org-mode
+
+Some interesting facts about Org-mode.
+
+There is an operation in Org mode called =org-edit-special=. You can use
+this to extract the snippet of code where the cursor is in, into a
+separate buffer, that you can use to edit separately: =C-c '=.
+
+Then you can save your thing with =C-c '= again, and it will be updated
+in the original buffer. I'm using this in this very own file to modify
+and update each snippet separately without surrounding text nearby.
+
+The following settings are changed by the following block:
+
+- Enables =org-indent-mode= and =auto-fill-mode=. A nice addition,
+  because I want my text to look pretty. There are barbarians that do
+  not line break their after 72 characters, can you believe?
+- For the same purpose, I add a ruler.
+- Additionally, make the tabulator work properly.
 
 #+BEGIN_SRC emacs-lisp
   (use-package org
+    :init
+    (setq org-src-tab-acts-natively t)
     :hook ((org-mode . auto-fill-mode)
-           (org-mode . org-indent-mode)))
+           (org-mode . org-indent-mode)
+           (org-mode . ruler-mode)))
 #+END_SRC
 
 * Language support
@@ -139,30 +251,39 @@ Some programming languages are still not supported out of the box.
 ** TypeScript
 
 #+BEGIN_SRC emacs-lisp
-  (use-package typescript-mode
-    :ensure t
-    :defer t)
+  (use-package typescript-mode)
 #+END_SRC
 
 ** YAML
 
 #+BEGIN_SRC emacs-lisp
   (use-package yaml-mode
-    :ensure t
-    :defer t)
+    :mode ("\\.yml$" . yaml-mode))
 #+END_SRC
 
 ** Ruby
 
-Out of the box, but I'm using rbenv.
+Ruby is supported out of the box, but here are a few fancy things.
+
+First, support for rbenv is provided via the rbenv package, which allows
+me to locally bind to a specific Ruby version depending on the project I
+am working on. (As an aside, this is the only way to fix the weird PATH
+shenanigans in MacOS...).
 
 #+BEGIN_SRC emacs-lisp
   (use-package rbenv
-    :ensure t
-    :defer t
-    :init (global-rbenv-mode)
-    :hook ((ruby-mode . rbenv-use-corresponding)))
+    :init
+    (setq rbenv-modeline-function 'rbenv--modeline-plain)
+    :hook ((ruby-mode . global-rbenv-mode)
+           (ruby-mode . rbenv-use-corresponding)))
 #+END_SRC
+
+Most of the time there is Ruby, there is also Rails and RSpec. The
+following thing will install rspec-mode. There are a few cool keys to
+use with rspec-mode:
+
+- =C-c , v=: will test this file.
+- =C-c , s=: will run a single test.
 
 * Language servers
 
@@ -241,6 +362,11 @@ dbconsoles and so.
                 ("C-c r" . projectile-rails-command-map)))
 #+END_SRC
 
+Also connect Projectile with Counsel:
+
+#+BEGIN_SRC emacs-lisp
+#+END_SRC
+
 ** Magit
 
 Magit is a tool for interacting with Git that leverages the integrated VCS
@@ -249,7 +375,6 @@ functionality present in GNU Emacs.  Here is the manual:
 
 #+BEGIN_SRC emacs-lisp
   (use-package magit
-    :ensure t
     :commands magit-status
     :bind (("C-c g" . magit-status)
            ("C-c M-g" . magit-dispatch-popup)))
@@ -265,13 +390,13 @@ Therefore, I'm switching to Neotree instead. I don't think there is much
 different aside of the bugs...
 
 #+BEGIN_SRC emacs-lisp
-  (use-package all-the-icons
-    :ensure t)
+  (use-package all-the-icons)
+
   (use-package neotree
-    :ensure t
     :after all-the-icons
-    :bind (("C-c t" . neotree-toggle))
-    :config (setq neo-theme (if window-system 'icons 'arrows)))
+    :bind ("C-c t" . neotree-toggle)
+    :config
+    (setq neo-theme (if window-system 'icons 'arrows)))
 #+END_SRC
 
 ** Elcord
@@ -284,7 +409,6 @@ home while working on side projects.
 
 #+BEGIN_SRC emacs-lisp
   (use-package elcord
-    :ensure t
-    :init (elcord-mode))
+    :init
+    (elcord-mode))
 #+END_SRC
-

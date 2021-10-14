@@ -164,6 +164,13 @@ Out of the box, but I'm using rbenv.
     :hook ((ruby-mode . rbenv-use-corresponding)))
 #+END_SRC
 
+Also add support for RSpec.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package rspec-mode
+    :ensure t)
+#+END_SRC
+
 * Language servers
 
 Let's go to the beefy thing here. LSP. A must. I am going to use lsp-mode.

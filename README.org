@@ -172,6 +172,22 @@ For some reason some defaults do not usually apply to org-mode...
            (org-mode . org-indent-mode)))
 #+END_SRC
 
+* Flycheck
+
+#+begin_src emacs-lisp
+  (use-package flycheck
+    :ensure t
+    :config
+    (global-flycheck-mode))
+
+  (use-package flycheck-inline
+    :ensure t
+    :after flycheck
+    :config (add-hook 'flycheck-mode-hook 'flycheck-inline-mode))
+
+  (add-hook 'after-init-hook #'global-flycheck-mode)
+#+end_src
+
 * Language support
 
 Some programming languages are still not supported out of the box.
@@ -194,7 +210,9 @@ Some programming languages are still not supported out of the box.
 
 ** Ruby
 
-Out of the box, but I'm using rbenv.
+Out of the box, but I'm using rbenv. I do not dislike rvm, but I
+prefer rbenv's approach regarding the use of static shims rather than
+playing with my PATH.
 
 #+BEGIN_SRC emacs-lisp
   (use-package rbenv
@@ -203,6 +221,23 @@ Out of the box, but I'm using rbenv.
     :init (global-rbenv-mode)
     :hook ((ruby-mode . rbenv-use-corresponding)))
 #+END_SRC
+
+Also some packages useful for Ruby development are sparkled here.
+
+#+begin_src emacs-lisp
+  (use-package ruby-refactor
+    :ensure t
+    :hook (ruby-mode . ruby-refactor-mode-launch))
+
+  (use-package ruby-tools
+    :ensure t
+    :hook (ruby-mode . ruby-tools-mode))
+
+  (use-package rubocop
+    :ensure t
+    :hook (ruby-mode . rubocop-mode)
+    :init (setq rubocop-format-on-save t))
+#+end_src
 
 Also add support for RSpec.
 
@@ -247,6 +282,24 @@ Also, enable lsp-ui so that I can autocomplete using company.
     :ensure t
     :init (global-company-mode))
 #+END_SRC
+
+* Helm
+
+Helm is a completion framework for Emacs.
+
+First, let's install it following the docs.
+
+#+begin_src emacs-lisp
+  (use-package helm
+    :ensure t
+    :init (helm-mode t)
+    :bind (("M-x" . helm-M-x) ;; override default M-x by helm
+           ("C-x C-f" . helm-find-files) ;; override default file find with helm
+           ("C-x b" . helm-buffers-list) ;; override default buffers with helm
+           ("C-h a" . helm-apropos) ;; override default apropos with helm
+           ("M-y" . helm-show-kill-ring) ;; override default killring with helm
+           ))
+#+end_src
 
 * Extra packages
 
@@ -347,3 +400,31 @@ home while working on side projects.
     :init (elcord-mode))
 #+END_SRC
 
+** add-node-modules-path
+
+#+begin_src emacs-lisp
+  (use-package add-node-modules-path
+    :ensure t
+    :hook ((js2-mode . add-node-modules-path)
+           (typescript-mode . add-node-modules-path)
+           (web-mode . add-node-modules-path)))
+#+end_src
+
+** Prettier
+
+Prettier.
+
+#+begin_src emacs-lisp
+  (use-package prettier-js
+    :ensure t
+    :hook ((js2-mode . prettier-js-mode)
+           (web-mode . prettier-js-mode)
+           (typescript-mode . prettier-js-mode)))
+#+end_src
+
+* Footnotes
+
+[fn:1]  It is important to note down that moving the cursor one word
+forward actually moves the cursor right after the *current* or next
+word.  Therefore, to move the cursor to the beginning of a word, one
+M-f less should be pressed.

@@ -133,6 +133,35 @@ that.
         auto-save-default nil)
 #+END_SRC
 
+* Session management
+
+One of the things that I'd like to improve upon is to avoid restarting
+Emacs.  In other words, I should not need to exit Emacs and open it
+again when doing things like switching context or tweaking this file.
+The following changes will try to make more appealing to just continue
+working instead of restart Emacs.
+
+First, talk about closing all the buffers, which is something that
+sometimes I'd like to do when switching context to have a clean
+workspace before jumping to my next task.  The following custom
+function should provide exactly that.
+
+Source: [[https://superuser.com/questions/895920/how-can-i-close-all-buffers-in-emacs][How can I close all buffers in Emacs?]]
+
+#+begin_src emacs-lisp
+  (defun close-all-buffers ()
+    (interactive)
+    (mapc 'kill-buffer (buffer-list)))
+#+end_src
+
+And then a quick macro to make reloading the Emacs dotfiles faster:
+
+#+begin_src emacs-lisp
+  (defun reload-config ()
+    (interactive)
+    (load-file "~/.emacs.d/init.el"))
+#+end_src
+
 * Org-mode configuration
 
 For some reason some defaults do not usually apply to org-mode...

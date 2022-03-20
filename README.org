@@ -88,15 +88,26 @@ given that sometimes I'm too lazy to even run =startx= in FreeBSD...
               mac-option-modifier 'none))))
 #+END_SRC
 
+When opening Emacs through a window system, it is important to ensure
+that the path is properly set, because otherwise some things that only
+are added to the system path when the bashrc is read will be skipped.
+
+#+begin_src emacs-lisp
+  (when (memq window-system '(mac ns x))
+    (use-package exec-path-from-shell
+      :ensure t
+      :init (exec-path-from-shell-initialize)))
+#+end_src
+
 Also it is a good time to setup the theme, which is only enable when using
 a GUI, because it requires a lot of colors and I don't usually have a lot of
 colors in my terminal.
 
 #+BEGIN_SRC emacs-lisp
   (when window-system
-    (use-package nord-theme
+    (use-package darktooth-theme
       :ensure t
-      :init (load-theme 'nord t)))
+      :init (load-theme 'darktooth t)))
 #+END_SRC
 
 In regards to the coding experience, it is mandatory to have relative line
@@ -209,6 +220,18 @@ Also, enable lsp-ui so that I can autocomplete using company.
 #+END_SRC
 
 * Extra packages
+
+** Aggresive Indent
+
+The purpose of Aggresive Indent is to make automatic indentation
+easier to perform by automatically updating the document whenever the
+indentation may change in a subtle way.
+
+#+begin_src emacs-lisp
+  (use-package aggressive-indent
+    :ensure t
+    :init (global-aggressive-indent-mode 1))
+#+end_src
 
 ** Editorconfig
 

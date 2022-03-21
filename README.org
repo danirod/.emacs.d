@@ -255,6 +255,12 @@ For some reason some defaults do not usually apply to org-mode...
            (org-mode . org-indent-mode)))
 #+END_SRC
 
+Now to the real thing. One of the things to configure are fonts.
+
+#+begin_src emacs-lisp
+  (add-hook 'org-mode 'variable-pitch-mode)
+#+end_src
+
 * Flycheck
 
 #+begin_src emacs-lisp

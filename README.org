@@ -83,9 +83,21 @@ given that sometimes I'm too lazy to even run =startx= in FreeBSD...
       (add-to-list 'default-frame-alist (cons 'font danirod/frame-font))
       (tool-bar-mode -1)
       (scroll-bar-mode -1)
+      (when (not is-mac)
+        (menu-bar-mode -1))
       (when is-mac
         (setq mac-command-modifier 'meta
               mac-option-modifier 'none))))
+
+  (defun danirod/start-stream-mode ()
+    (interactive)
+    (set-frame-font "DejaVu Sans Mono 20" nil nil))
+
+  (defun danirod/stop-stream-mode ()
+    (interactive)
+    (if (eq system-type 'darwin)
+        (set-frame-font "Menlo 13" nil nil)
+      (set-frame-font "DejaVu Sans Mono 11" nil nil)))
 #+END_SRC
 
 When opening Emacs through a window system, it is important to ensure
@@ -122,15 +134,21 @@ between two lines by just looking at the screen, I am not a supercomputer!
 Also rulers.
 
 #+BEGIN_SRC emacs-lisp
-  (add-hook 'prog-mode-hook 'display-fill-column-indicator-mode)
+  ;; (add-hook 'prog-mode-hook 'display-fill-column-indicator-mode)
 #+END_SRC
 
-Also disable the backup files because I will usually have Git available to do
-that.
+Electric indentation.
 
 #+BEGIN_SRC emacs-lisp
-  (setq make-backup-files nil
-        auto-save-default nil)
+  (electric-indent-mode 1)
+#+END_SRC
+
+Also disable the backup files because I will usually have Git
+available to do that.
+
+#+BEGIN_SRC emacs-lisp
+    (setq make-backup-files nil
+          auto-save-default nil)
 #+END_SRC
 
 * Session management
@@ -303,18 +321,6 @@ First, let's install it following the docs.
 
 * Extra packages
 
-** Aggresive Indent
-
-The purpose of Aggresive Indent is to make automatic indentation
-easier to perform by automatically updating the document whenever the
-indentation may change in a subtle way.
-
-#+begin_src emacs-lisp
-  (use-package aggressive-indent
-    :ensure t
-    :init (global-aggressive-indent-mode 1))
-#+end_src
-
 ** Editorconfig
 
 Used for consistency between projects.
@@ -377,13 +383,14 @@ Therefore, I'm switching to Neotree instead. I don't think there is much
 different aside of the bugs...
 
 #+BEGIN_SRC emacs-lisp
-  (use-package all-the-icons
-    :ensure t)
   (use-package neotree
     :ensure t
-    :after all-the-icons
     :bind (("C-c t" . neotree-toggle))
-    :config (setq neo-theme (if window-system 'icons 'arrows)))
+    :init
+    (setq neo-window-position 'right)
+    (setq neo-theme 'ascii)
+    (setq neo-window-width 30)
+    (setq neo-smart-open t))
 #+END_SRC
 
 ** Elcord

@@ -72,32 +72,38 @@ line and GNU Emacs as a standalone graphical application in my window manager,
 given that sometimes I'm too lazy to even run =startx= in FreeBSD...
 
 #+BEGIN_SRC emacs-lisp
+  (defvar danirod/font-family)
+  (defvar danirod/font-family-large)
+
+  ;; Set the font to be used in graphical environments.
+  (if (eq system-type 'darwin)
+      (setq danirod/font-family "Menlo 14"
+            danirod/font-family-large "Menlo 20")
+    (setq danirod/font-family "DejaVu Sans Mono 11"
+          danirod/font-family-large "DejaVu Sans Mono 20"))
+
   (when window-system
-    (let* ((is-mac (eq system-type 'darwin))
-           (danirod/frame-font (if is-mac "Menlo 13" "DejaVu Sans Mono 10")))
-      (add-to-list 'initial-frame-alist '(width . 150))
-      (add-to-list 'initial-frame-alist '(height . 40))
-      (add-to-list 'initial-frame-alist (cons 'font danirod/frame-font))
-      (add-to-list 'default-frame-alist '(width . 150))
-      (add-to-list 'default-frame-alist '(height . 40))
-      (add-to-list 'default-frame-alist (cons 'font danirod/frame-font))
-      (tool-bar-mode -1)
-      (scroll-bar-mode -1)
-      (when (not is-mac)
-        (menu-bar-mode -1))
-      (when is-mac
-        (setq mac-command-modifier 'meta
-              mac-option-modifier 'none))))
+    (set-frame-font danirod/font-family)
+    (tool-bar-mode -1)
+    (scroll-bar-mode -1)
+    ;; On a Mac, treat command as option to make it easier.
+    ;; (when (eq system-type 'darwin)
+    ;;  (setq mac-command-modifier 'meta
+    ;;        mac-option-modifier 'none))
+    ;; On macOS the menu bar does not bother me, but on other
+    ;; platforms, remove the menubar to save precious space,
+    ;; and also to force me to learn to use the bindings or M-x.
+    (when (not (eq system-type 'darwin))
+      (menu-bar-mode -1))
 
-  (defun danirod/start-stream-mode ()
-    (interactive)
-    (set-frame-font "DejaVu Sans Mono 20" nil nil))
-
-  (defun danirod/stop-stream-mode ()
-    (interactive)
-    (if (eq system-type 'darwin)
-        (set-frame-font "Menlo 13" nil nil)
-      (set-frame-font "DejaVu Sans Mono 11" nil nil)))
+    (defun danirod/start-stream-mode ()
+      "When livestreaming or sharing the screen I want the font bigger."
+      (interactive)
+      (set-frame-font danirod/font-family-large nil nil))
+    (defun danirod/stop-stream-mode ()
+      "When I stop streaming, I want my fonts to be normal again."
+      (interactive)
+      (set-frame-font danirod/font-family nil t)))
 #+END_SRC
 
 When opening Emacs through a window system, it is important to ensure
@@ -120,6 +126,8 @@ colors in my terminal.
     (use-package darktooth-theme
       :ensure t
       :init (load-theme 'darktooth t)))
+
+  (global-hl-line-mode 1)
 #+END_SRC
 
 In regards to the coding experience, it is mandatory to have relative line
@@ -131,7 +139,59 @@ between two lines by just looking at the screen, I am not a supercomputer!
   (setq display-line-numbers-type 'relative)
 #+END_SRC
 
-Also rulers.
+One of the disadvantages of Emacs is that, because it is not a modal
+editor, there is no fast way to just "insert a new line above the
+current line" or "insert a new line below the current line".  While
+Doom Emacs can solve these things, I'd rather not install full Doom
+here, so I'll only sparkle some things that I miss from Vim: motions
+for inserting lines on top or below.
+
+For the full list of motions that can be used to create or delete
+lines it is useful to know the following motions:
+
+| Motion        | Standard | Action                                           |
+|---------------+----------+--------------------------------------------------|
+| C-o           | Yes      | Insert a line below this one; cursor stays.      |
+| C-k           | Yes      | Delete everything until the end of the line.     |
+| C-S-BACKSPACE | Yes      | Delete the entire line.                          |
+| C-RET         | No       | Insert a line below this one; move cursor there. |
+| C-S-RET       | No       | Insert a line above this one; move cursor there. |
+
+Here are the definitions for these custom motions:
+
+#+begin_src emacs-lisp
+  (defun new-line-below ()
+    "Insert a new line below this one and jump there"
+    (interactive)
+    (end-of-line)
+    (newline-and-indent))
+  (defun new-line-above ()
+    "Insert a new line on top of this one and jump there"
+    (interactive)
+    (beginning-of-line)
+    (newline-and-indent)
+    (previous-line))
+
+  (global-set-key (kbd "<C-return>") 'new-line-below)
+  (global-set-key (kbd "<C-S-return>") 'new-line-above)
+#+end_src
+
+Some motions for buffer navigation:
+
+| Motion  | Standard | Action                                                  |
+|---------+----------+---------------------------------------------------------|
+| C-x o   | Yes      | Move to the next buffer (uses the other-window command) |
+| C-x C-o | No       | Move to the next buffer in opposite direction.          |
+
+#+begin_src emacs-lisp
+  (defun other-window-backwards ()
+    (interactive)
+    (other-window -1))
+
+  (global-set-key (kbd "C-x C-o") 'other-window-backwards)
+#+end_src
+
+Also, rulers.
 
 #+BEGIN_SRC emacs-lisp
   ;; (add-hook 'prog-mode-hook 'display-fill-column-indicator-mode)
@@ -175,9 +235,14 @@ Source: [[https://superuser.com/questions/895920/how-can-i-close-all-buffers-in-
 And then a quick macro to make reloading the Emacs dotfiles faster:
 
 #+begin_src emacs-lisp
-  (defun reload-config ()
+  (defun danirod/reload-config ()
+    "Automatically reload the configuration file"
     (interactive)
     (load-file "~/.emacs.d/init.el"))
+  (defun danirod/edit-config ()
+    "Edit this very file in a different window for faster access"
+    (interactive)
+    (find-file-other-window "~/.emacs.d/README.org"))
 #+end_src
 
 * Org-mode configuration
@@ -243,6 +308,10 @@ playing with my PATH.
 Also some packages useful for Ruby development are sparkled here.
 
 #+begin_src emacs-lisp
+  (use-package inf-ruby
+    :ensure t
+    :hook (ruby-mode . inf-ruby-minor-mode))
+
   (use-package ruby-refactor
     :ensure t
     :hook (ruby-mode . ruby-refactor-mode-launch))
@@ -250,6 +319,8 @@ Also some packages useful for Ruby development are sparkled here.
   (use-package ruby-tools
     :ensure t
     :hook (ruby-mode . ruby-tools-mode))
+
+  (use-package slim-mode :ensure t)
 
   (use-package rubocop
     :ensure t
@@ -354,7 +425,7 @@ dbconsoles and so.
   (use-package projectile-rails
     :ensure t
     :after projectile
-    :init (projectile-rails-global-mode)
+    :hook ((projectile-mode . projectile-rails-mode))
     :bind (:map projectile-rails-mode-map
                 ("C-c r" . projectile-rails-command-map)))
 #+END_SRC

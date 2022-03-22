@@ -1,0 +1,752 @@
+#+title: danirod's adventures using GNU Emacs
+#+STARTUP: overview
+
+* Introduction
+
+This document serves two purposes:
+
+- It documents my progress as I learn about GNU Emacs.  This is the
+  notebook where I write stuff that I learn so that I can recall later
+  when I forget as usual.
+- It uses org-babel to do some literate programming containing my
+  configuration file.  The =init.el= file actually uses org-babel to
+  extract the source code blocks in this file and evaluate them.  Why
+  having comments in your config file, when you can embed your config
+  file in a standard text document?
+
+* Modes
+
+GNU Emacs is a text editor oriented to modes.  What is a mode?  Let's
+check the docs:
+
+#+begin_quote
+A /mode/ is a set of definitions that customize Emacs behaviour in
+useful ways.  There are two varieties of modes: /minor modes/, which
+provide features that users can turn on and off while editing; and
+/major modes/, which are used for editing or interacting with a
+particular kind of text.  Each buffer has exactly one /major mode/ at
+a time.  --- GNU Emacs Manual
+#+end_quote
+
+For instance, when this file is opened in Emacs, it enters the Org
+major mode.  When I open a C file, it enters the C mode.  When I open
+a Rust file, it enters the Rust mode.  Then, additional modes will
+provide extra features, such as:
+
+- Auto fill :: Emacs will automatically split long lines so that they
+  fit in a column of text.
+- Flyspell :: Emacs will do some spell checking, many major modes use
+  it to lint the code and check for syntax errors too.
+- HL Line :: Highlights the current line so that it is easier to see.
+
+* Package manager configuration
+
+In GNU Emacs people embrace package repositories, which contains
+packages.  This is very different from Vim, where there is tooling for
+packages now, but you have to provide the packages by yourself.
+
+The first thing to do, will be configuring the different repositories
+where I'll pick the software.  Also, each repository has a different
+priority so that when multiple repositories carry the same package,
+one can override another, for instance to fetch more updated versions
+of a package.
+
+   #+begin_src emacs-lisp
+     ;;; Configure the package managers and the repositories.
+     (require 'package)
+     (setq package-archives
+           '(("GNU ELPA" . "https://elpa.gnu.org/packages/")
+             ("MELPA Stable" . "https://stable.melpa.org/packages/")
+             ("MELPA" . "https://melpa.org/packages/"))
+           package-archive-priorities
+           '(("MELPA Stable" . 30)
+             ("MELPA" . 20)
+             ("GNU ELPA" . 10))
+           package-enable-at-startup nil
+           package-user-dir (expand-file-name (concat user-emacs-directory "elpa")))
+     (package-initialize)
+  #+end_src
+
+However, I am not going to bother installing software manually and I am
+just going to use the [[https://github.com/jwiegley/use-package][use-package]] package for this, since it will make
+more declarative the list of packages and the configuration of each
+package.  This will be the only package manually installed.  The
+package-installed-p macro makes tests whether the package is already
+installed or not.
+
+#+begin_src emacs-lisp
+  (unless (package-installed-p 'use-package)
+    (package-refresh-contents)
+    (package-install 'use-package))
+  (require 'use-package)
+#+end_src
+
+And now it is possible to install additional packages using this
+framework.  The package has a README on their website, but the gist
+is: you use =(use-package <package> <extra options>)=.  Here are some
+of the most important options:
+
+- :init :: One or multiple forms will follow this keyword, and this is
+  code that is going to be executed before loading the package.
+- :config :: One or more forms will follow this keyword, and this is
+  code that is going to be executed after loading the package.
+- :commands :: Unless this key is given, the package will always be
+  loaded as soon as you issue the use-package form. However, if this
+  option is used, it will be followed by either a symbol or a list of
+  symbols that should be treated as autoloads, which means that a stub
+  command will be created which, once called, will load the rest of
+  the plugin and replace the definition -- this is some form of
+  defered loading.
+- :bind :: This creates autocommands bound to a key, so pressing the
+  key will trigger the stub autoload that will load the rest of the
+  plugin, then replace the bind by whatever you really intended to
+  do. Is followed by a cons =("key" . command)=, or a list of conses.
+- :mode :: It will create an autocommand that will trigger when a file
+  whose name matches the given pattern is opened.
+- :interpreter :: It will create an autocommand that will trigger when
+  a file that has a shebang at the top of the file that matches the
+  given pattern is opened.
+- :hook :: It will create an autocommand that will get trigger using a
+  hook rule, whenever another mode is started.
+- :if :: Given a boolean primitive or evaluation, will only do the
+  lazy if the evaluation comes true.  For instance, to load something
+  only on graphical mode, or in a specific OS.
+- :after :: Defer loading a package until another package has loaded.
+
+* Application configuration
+
+The following settings deal with Emacs itself.
+
+** Diminish
+
+Reading the docs, Diminish removes minor modes from the modeline.  It
+will be one of the first packages that will be loaded, in order to
+make it possible to then connect it with use-package via =:diminish t=.
+
+#+begin_src emacs-lisp
+  (use-package diminish
+    :ensure t)
+#+end_src
+
+** Set PATH from shell
+
+Because I am a weirdo, I make use of programs like rvm, nvm, rbenv,
+nodenv, goenv, rustup, which will install local versions of some
+toolchains and then patch the PATH to load some stubs.  Therefore,
+in some cases the PATH may not be properly configured, thus making
+some commands fail.  The following package reads the PATH from a fresh
+terminal session.
+
+#+begin_src emacs-lisp
+  (when (memq window-system '(mac ns x))
+    (use-package exec-path-from-shell
+      :if window-system
+      :ensure t
+      :config
+      (exec-path-from-shell-initialize)))
+#+end_src
+
+** Close all the buffers
+
+This is an important feature to me because whenever I switch context I
+need to restore my tools to a clean state.  The following macro
+definition will close everything and it is the only thing that
+prevents me from going C-x C-c and restarting Emacs completely.
+
+#+begin_src emacs-lisp
+  (defun danirod/clean ()
+    (interactive)
+    (progn (mapc 'kill-buffer (buffer-list))
+           (delete-other-windows)))
+#+end_src
+
+** Quick access to the configuration
+
+The following macros will make it easier to open and reload this
+configuration file.  These will be useful as long as I'm still testing
+GNU Emacs because I expect to come here around a lot.
+
+As a side note: instead of reloading the configuration, it should be
+easier to evaluate an elisp sexp (S-expression).  This can be done
+using the C-x C-e chord with the cursor placed after something that
+can be evaluated.
+
+#+begin_src emacs-lisp
+  (defun danirod/open-config ()
+    "Open in a new frame the contents of the emacs.org file"
+    (interactive)
+    (find-file-other-frame (expand-file-name "emacs.org" user-emacs-directory)))
+  (defun danirod/reload-config ()
+    "Reloads the init.el dotfiles"
+    (interactive)
+    (load-file (expand-file-name "init.el" user-emacs-directory)))
+#+end_src
+
+** Backup files
+
+The following snippet disables the creation of backup files.  If you want to
+create a backup, the thing you are looking for is called version control.
+
+#+begin_src emacs-lisp
+  (setq make-backup-files nil
+        auto-save-default nil)
+#+end_src
+
+* Ergonomics
+
+** Relative numbers
+
+While GNU Emacs is not as modal as Vim, relative numbers can be
+enabled.  It is possible to do some chords that looks like Vim
+motions.  For instance, =M-5 C-p= will move the cursor 5 lines up.  The
+following snippet will present relative numbers in programming modes.
+
+#+begin_src emacs-lisp
+  (add-hook 'prog-mode-hook 'display-line-numbers-mode)
+  (setq display-line-numbers-type 'relative)
+#+end_src
+
+** Quick new line
+
+Similar to the motions that will insert a line above or below the
+current one in Vim.  The following snippet will define two new
+bindings:
+
+- C-RET :: Insert a line below this one and move the cursor there.
+- C-S-RET :: Insert a line above this one and move the cursor there.
+
+#+begin_src emacs-lisp
+  (defun new-line-below ()
+    "Insert a new line below this one and jump there"
+    (interactive)
+    (end-of-line)
+    (newline-and-indent))
+  (defun new-line-above ()
+    "Insert a new line on top of this one and jump there"
+    (interactive)
+    (beginning-of-line)
+    (newline-and-indent)
+    (previous-line))
+  (global-set-key (kbd "<C-return>") 'new-line-below)
+  (global-set-key (kbd "<C-S-return>") 'new-line-above)
+#+end_src
+
+** Window management
+
+
+For multiple windows, it is easier to just use ace-window to pick where
+do you want to land.  I was worried about overriding the chord in use by
+=other-window=, but since ace-window behaves like other-window when there
+is only one or two windows opened, it doesn't matter a lot.
+
+#+begin_src emacs-lisp
+  (use-package ace-window
+    :ensure t
+    :bind (("C-x o" . ace-window)))
+#+end_src
+
+* Application look and feel
+
+** Graphical environment
+
+The following snippet will change some settings only when running in a
+graphical environment.  It will include removing some window elements
+that are not necessary at all (such as the toolbars), and it will also
+set the font.
+
+#+begin_src emacs-lisp
+  (when window-system
+    (tool-bar-mode -1)
+    ; (menu-bar-mode -1)
+    (scroll-bar-mode -1))
+#+end_src
+
+However, the following snippet will re-enable the menu bar if the
+system is a Mac, as well as do other things to try to make easier to
+use Control and Meta on the keyboard of a MacBook.
+
+#+begin_src emacs-lisp
+  (when (eq system-type 'darwin)
+    (menu-bar-mode 1))
+#+end_src
+
+*** TODO Create presentation macros
+
+(It should be a macro that makes the font larger, for instance, to be
+used in livestreams or when doing some pair programming with other
+people via screen sharing.)
+
+** Themes, colors and fonts
+
+Let's go with Tomorrow Theme.
+
+#+begin_src emacs-lisp
+  (use-package color-theme-sanityinc-tomorrow
+    :if window-system
+    :ensure t
+    :config
+    (load-theme 'sanityinc-tomorrow-night t))
+#+end_src
+
+Make the current line more subtle by highlighting the current line.
+
+#+begin_src emacs-lisp
+  (hl-line-mode)
+#+end_src
+
+  For the fonts, let's find some fallbacks depending on the OS.
+
+#+begin_src emacs-lisp
+  (defun danirod/start-show ()
+    "Configure the look and feel when a presentation starts."
+    (interactive)
+    (unless (frame-parameter nil 'fullscreen)
+      (toggle-frame-maximized))
+    (cond
+     ((find-font (font-spec :name "Menlo"))
+      (set-frame-font "Menlo-20"))
+     ((find-font (font-spec :name "Consolas"))
+      (set-frame-font "Consolas-20"))
+     ((find-font (font-spec :name "DejaVu Sans Mono"))
+      (set-frame-font "DejaVu Sans Mono-20"))))
+
+  (defun danirod/stop-show ()
+    "Configure the look and feel when I am not presentating."
+    (interactive)
+    (cond
+     ((find-font (font-spec :name "Menlo"))
+      (set-frame-font "Menlo-12"))
+     ((find-font (font-spec :name "Consolas"))
+      (set-frame-font "Consolas-11"))
+     ((find-font (font-spec :name "DejaVu Sans Mono"))
+      (set-frame-font "DejaVu Sans Mono-10"))))
+
+  ;; By default, start in no presentation mode.
+  (danirod/stop-show)
+#+end_src
+
+Olivetti is a package for aligning text to center.
+
+#+begin_src emacs-lisp
+  (use-package olivetti
+    :if window-system
+    :ensure t
+    :hook ((text-mode . olivetti-mode)
+	   (org-mode . olivetti-mode)))
+#+end_src
+
+* Things that cannot be explained
+
+** nyan-mode
+
+Imagine switching to Emacs just for this...
+
+#+begin_src emacs-lisp
+  (use-package nyan-mode
+    :ensure t
+    :config
+    (nyan-mode)
+    (setq nyan-animate-nyancat t
+          nyan-wavy-trail t))
+#+end_src
+
+** elcord
+
+elcord uses Discord RPC to push as your game status whatever you are
+editing.  I do not thing this is useful in a work environment but it is
+a nice addition for swag.
+
+#+begin_src emacs-lisp
+  (use-package elcord
+    :ensure t
+    :config
+    (elcord-mode)
+    (setq elcord-quiet t))
+#+end_src
+
+* Text modes
+
+#+begin_src emacs-lisp
+(add-hook 'text-mode-hook 'auto-fill-mode)
+(setq-default fill-column 72)
+#+end_src
+
+* Treemacs
+
+Treemacs presents a tree similar to NERDTree.
+
+#+begin_src emacs-lisp
+  (use-package treemacs
+    :ensure t
+    :bind (("C-c t t" . treemacs)
+           ("C-c t C-t" . treemacs-find-file))
+    :config
+    (setq treemacs-position 'right)
+    (treemacs-resize-icons 16)
+    (treemacs-follow-mode t)
+    (treemacs-filewatch-mode t))
+#+end_src
+
+* Magit
+
+Magit is a tool that interacts with Git repositories.  It leverages the
+integrated VCS functionality present in GNU Emacs and does a lot of
+things that not many Git clients can do, such as handling hunks.  It
+also has a pretty user manual that is very long and that I wish to read
+at some point.
+
+#+begin_src emacs-lisp
+  (use-package magit
+    :ensure t
+    :bind (("C-c g" . magit-status)
+           ("C-c M-g" . magit-dispatch)))
+#+end_src
+
+Git Gutters.
+
+#+begin_src emacs-lisp
+  (use-package git-gutter
+    :ensure t
+    :diminish git-gutter-mode
+    :config
+    (global-git-gutter-mode))
+#+end_src
+
+* Org-mode
+
+Org-mode is the beast and probably the reason why I'm testing GNU
+Emacs.  For newcomers, it looks like a different markup language
+similar to Markdown, but it is actually a beast designed to make Emacs
+a tool that could even manage your entire life.
+
+#+begin_src emacs-lisp
+  (use-package org
+    :ensure t
+    :hook (org-mode . org-indent-mode)
+    :config
+    (setq org-hide-emphasis-markers t))
+  (use-package org-bullets
+    :after org
+    :ensure t
+    :hook (org-mode . org-bullets-mode))
+#+end_src
+
+* EditorConfig
+
+To be honest, I'd rather place a dotfile with my editorconfig settings
+than configure every single text editor on Earth.
+
+#+begin_src emacs-lisp
+  (use-package editorconfig
+    :ensure t
+    :hook ((prog-mode . editorconfig-mode))
+    :diminish editorconfig-mode)
+#+end_src
+
+* Flycheck
+
+Flycheck performs syntax checking, and it is the tool to use for
+highlight errors and other linting issues that are important when
+writing code.  However, it should be possible to also use Flycheck for
+things like spellchecking.
+
+#+begin_src emacs-lisp
+  (use-package flycheck
+    :ensure t
+    :diminish t
+    :config
+    (global-flycheck-mode))
+
+  (use-package flycheck-pos-tip
+    :ensure t
+    :diminish t
+    :after flycheck
+    :hook ((flycheck-mode . flycheck-pos-tip-mode)))
+#+end_src
+
+* LSP
+
+The language server protocol allows to have nice autocompletions,
+refactors and error detections on a lot of programming languages.  It is
+decoupled, so I can take advantage of any other language server written
+for a specific programming language without requiring it to support the
+text editor I am using.  At the same time, I can use the same plugin to
+provide a LSP framework for any supported programming language.
+
+The LSP in Emacs is provided by LSP.
+
+#+begin_src emacs-lisp
+  (use-package lsp-mode
+    :ensure t
+    :after flycheck
+    :init
+    (setq lsp-keymap-prefix "M-l")
+    :hook ((c-mode web-mode js-mode js2-mode typescript-mode ruby-mode go-mode rust-mode) . lsp))
+#+end_src
+
+For the fancy user interface, LSP-UI is used.
+
+#+begin_src emacs-lisp
+  (use-package lsp-ui
+    :ensure t
+    :after lsp-mode
+    :commands lsp-ui-mode)
+#+end_src
+
+Integration with lsp-treemacs:
+
+#+begin_src emacs-lisp
+  (use-package lsp-treemacs
+    :ensure t
+    :after lsp-mode treemacs
+    :commands lsp-treemacs-errors-list)
+#+end_src
+
+And integration with Helm:
+
+#+begin_src emacs-lisp
+  (use-package helm-lsp
+    :ensure t
+    :commands helm-lsp-workspace-symbol)
+#+end_src
+
+* Company
+
+Company is a completion framework.  LSP will take advantage of Company if
+enabled, but Company can also be used standalone of LSP.  For instance, when
+editing ELisp files it will use the native facilities provided by GNU Emacs to
+complete things.
+
+#+begin_src emacs-lisp
+  (use-package company
+    :ensure t
+    :diminish company-mode
+    :config
+    (global-company-mode))
+#+end_src
+
+* Helm
+
+Helm is a completion framework.
+
+#+begin_src emacs-lisp
+  (use-package helm
+    :ensure t
+    :diminish helm-mode
+    :init (helm-mode t)
+    :bind (("M-x" . helm-M-x)
+           ("C-x C-f" . helm-find-files)
+           ("C-x b" . helm-buffers-list)
+           ("C-h a" . helm-apropos)
+           ("M-y" . helm-show-kill-ring)))
+#+end_src
+
+* Projectile
+
+Projectile manages projects.  A project is considered a directory that
+contains source code files related to a main library or executable.  The
+idea is that when you want to work on a repository or a website you
+start a project for that repository.
+
+Projects allow to avoid losing focus when you open subdirectories, for
+instance.
+
+The main layer is provided by projectile itself.
+
+#+begin_src emacs-lisp
+  (use-package projectile
+    :ensure t
+    :diminish projectile-mode
+    :init
+    (setq projectile-project-search-path '("~/Code" "~/Dev")
+          projectile-switch-project-action 'projectile-dired)
+    :config
+    (projectile-mode)
+    (projectile-add-known-project "~/.emacs.d")
+    (projectile-add-known-project "~/.dotfiles")
+    :bind-keymap ("M-p" . projectile-command-map))
+
+  (use-package helm-projectile
+    :ensure t
+    :after projectile helm
+    :config
+    (helm-projectile-on)
+    (setq projectile-completion-system 'helm))
+
+  (use-package treemacs-projectile
+    :ensure t
+    :after treemacs projectile
+    :bind (:map projectile-command-map ("h" . treemacs-projectile)))
+#+end_src
+
+* Programming languages support
+
+** TypeScript
+
+#+begin_src emacs-lisp
+  (use-package typescript-mode
+    :ensure t
+    :mode "\\.ts[x]\\'"
+    :hook (typescript-mode . lsp-deferred))
+#+end_src
+
+** JavaScript
+
+*** add-node-modules-path
+
+I don't usually install things globally but per project, so being able
+to use the packages in the node_modules/.bin is useful.  For instance,
+TypeScript, Prettier or ESLint.  The following package will make it
+possible.
+
+#+begin_src emacs-lisp
+  (use-package add-node-modules-path
+    :ensure t
+    :hook ((js-mode . add-node-modules-path)
+           (js2-mode . add-node-modules-path)
+           (web-mode . add-node-modules-path)
+           (typescript-mode . add-node-modules-path)))
+#+end_src
+
+*** Prettier
+
+Configure support for Prettier.  It will format and reindent the file on
+save, and also when calling =prettier-prettify= at any time.  Note that it
+will not render anything else; errors are reported via ESLint +
+Flycheck.
+
+#+begin_src emacs-lisp
+  (use-package prettier-js
+    :ensure t
+    :hook ((js-mode . prettier-js-mode)
+           (js2-mode . prettier-js-mode)
+           (web-mode . prettier-js-mode)
+           (typescript-mode . prettier-js-mode)))
+#+end_src
+
+** YAML
+
+#+begin_src emacs-lisp
+  (use-package yaml-mode
+    :ensure t
+    :mode "\\.yml\\'")
+#+end_src
+
+** Ruby
+
+I spend a lot of time writing Ruby code at the moment, so it makes sense
+that this is a very long and detailed section.
+
+*** projectile-rails
+
+Extra goodies for projectile will allow to do things such as running rails
+console or rails server.
+
+#+begin_src emacs-lisp
+  (use-package projectile-rails
+    :ensure t
+    :diminish
+    :after projectile
+    :hook ((ruby-mode . projectile-rails-global-mode))
+    :bind (:map projectile-rails-mode-map
+                ("M-p r" . projectile-rails-command-map)))
+#+end_src
+
+*** rbenv
+
+Emacs supports Ruby, but the following packages enhance the experience
+when working on Ruby and Ruby on Rails projects.
+
+First, enable support for rbenv, which is the thing that I use in my
+systems to manage multiple versions of Ruby.  RVM is a neat alternative,
+but I prefer rbenv's approach of using a single shim instead of mangling
+the PATH every time you enter a directory.
+
+#+begin_src emacs-lisp
+  (use-package rbenv
+    :ensure t
+    :diminish
+    :hook (after-init . global-rbenv-mode)
+    :init
+    (setq rbenv-show-active-ruby-in-modeline nil))
+#+end_src
+
+*** ruby-end
+
+With ruby-end, the =end= of a block is automatically added.
+
+#+begin_src emacs-lisp
+  (use-package ruby-end
+    :ensure t
+    :diminish
+    :hook (ruby-mode . ruby-end-mode))
+#+end_src
+
+*** inf-ruby
+
+inf-ruby makes easier to spawn REPLs for Ruby.
+
+#+begin_src emacs-lisp
+  (use-package inf-ruby
+    :ensure t
+    :hook ((ruby-mode . inf-ruby-minor-mode)))
+#+end_src
+
+*** Refactoring for Ruby
+
+Things that ruby-tools do:
+
+- =C-'= :: converts to single quotes (for instance, a symbol).
+- =C-:= :: converts to symbol (for instance, some single quotes).
+- =C-"= :: converts to double quotes (for instance, some single).
+
+Not much, but a nice feature as long as it is only toggled for
+ruby-mode.
+
+#+begin_src emacs-lisp
+  (use-package ruby-tools
+    :ensure t
+    :diminish ruby-tools-mode
+    :hook ((ruby-mode . ruby-tools-mode)))
+#+end_src
+
+ruby-refactor makes easy to do some refactors like:
+
+- =C-c C-r e= :: Selected a text region, it will extract the selected
+  region into a separate function and replace the inlined version with a
+  call to the new function.
+
+#+begin_src emacs-lisp
+  (use-package ruby-refactor
+    :ensure t
+    :diminish ruby-refactor-mode
+    :hook ((ruby-mode . ruby-refactor-mode-launch)))
+#+end_src
+
+*** HAML and SLIM
+
+HAML and SLIM are popular alternatives to ERB.  Not much to say, but
+because they are mostly used in Ruby (Ruby on Rails), it makes sense
+that they are nested here in the outline.
+
+#+begin_src emacs-lisp
+  (use-package haml-mode
+    :ensure t
+    :mode "\\.haml\\'")
+  (use-package slim-mode
+    :ensure t
+    :mode "\\.slim\\'")
+#+end_src
+
+*** RSpec
+
+Be nice with RSpec because this is what I use.
+
+#+begin_src emacs-lisp
+  (use-package rspec-mode
+    :ensure t
+    :diminish rspec-mode
+    :hook ((ruby-mode . rspec-mode)
+           (dired-mode . rspec-dired-mode)))
+#+end_src
+

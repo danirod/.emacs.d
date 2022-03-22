@@ -1,4 +1,11 @@
-*
-!init.el
-!README.org
-!.gitignore
+custom.el
+*.elc
+*~
+.cache/
+.lsp-session-v1
+elpa/
+eshell/history
+transient/history.el
+Config.el
+projectile-bookmarks.eld
+tutorial/*.tut

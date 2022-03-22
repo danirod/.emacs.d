@@ -221,6 +221,17 @@ it behaves in X.
         mac-right-option-modifier 'none)
 #+end_src
 
+** Indentation
+
+If you are in the middle of a comment and you press ENTER, you should
+continue to be in a comment block unless you say so by deleting these
+prefix characters.  This is how it works in other text editors so I am
+used to this.
+
+#+begin_src emacs-lisp
+(define-key global-map (kbd "RET") 'default-indent-new-line)
+#+end_src
+
 * Ergonomics
 
 ** Relative numbers

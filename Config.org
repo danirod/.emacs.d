@@ -222,6 +222,12 @@ it behaves in X.
 #+end_src
 
 ** Indentation
+** Line numbers in modeline
+
+#+begin_src emacs-lisp
+  (line-number-mode)
+  (column-number-mode)
+#+end_src
 
 * Ergonomics
 

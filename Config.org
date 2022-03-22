@@ -81,6 +81,17 @@ installed or not.
   (require 'use-package)
 #+end_src
 
+On macOS there is a chance that the Emacs keys are not provided or out
+of date. Install the following package or make sure that it is overall
+available for use in the system.
+
+#+begin_src emacs-lisp
+  (when (eq system-type 'darwin)
+    (unless (package-installed-p 'gnu-elpa-keyring-update)
+      (package-install 'gnu-elpa-keyring-update))
+    (require 'gnu-elpa-keyring-update))
+#+end_src
+
 And now it is possible to install additional packages using this
 framework.  The package has a README on their website, but the gist
 is: you use =(use-package <package> <extra options>)=.  Here are some
@@ -192,6 +203,24 @@ create a backup, the thing you are looking for is called version control.
         auto-save-default nil)
 #+end_src
 
+** Keys on a Mac
+
+MacOS has a keyboard that behaves slightly different than X and
+Windows-NT, but I am going to to settle this by making it behave like
+it behaves in X.
+
+- Both Command keys will also act as a Control key, since otherwise the
+  Command key is useless on Emacs.
+- Left ALT will act as Meta, as usual.
+- Right ALT will act as a regular Option key, in order to type dead
+  keys that otherwise would not be possible to do.
+
+#+begin_src emacs-lisp
+  (setq mac-command-modifier 'control
+        mac-option-modifier 'meta
+        mac-right-option-modifier 'none)
+#+end_src
+
 * Ergonomics
 
 ** Relative numbers
@@ -270,22 +299,34 @@ use Control and Meta on the keyboard of a MacBook.
     (menu-bar-mode 1))
 #+end_src
 
-*** TODO Create presentation macros
+Also, on a Mac, use menu bar.
 
-(It should be a macro that makes the font larger, for instance, to be
-used in livestreams or when doing some pair programming with other
-people via screen sharing.)
+#+begin_src emacs-lisp
+  (use-package ns-auto-titlebar
+    :ensure t
+    :if (eq system-type 'darwin)
+    :config
+    (ns-auto-titlebar-mode))
+#+end_src
 
 ** Themes, colors and fonts
 
-Let's go with Tomorrow Theme.
+Let's just drop a few themes and disable "disabled" on the one I want to
+use today...
 
 #+begin_src emacs-lisp
   (use-package color-theme-sanityinc-tomorrow
+    :disabled t
     :if window-system
     :ensure t
     :config
     (load-theme 'sanityinc-tomorrow-night t))
+
+  (use-package vscode-dark-plus-theme
+    :if window-system
+    :ensure t
+    :config
+    (load-theme 'vscode-dark-plus))
 #+end_src
 
 Make the current line more subtle by highlighting the current line.
@@ -313,9 +354,11 @@ Make the current line more subtle by highlighting the current line.
   (defun danirod/stop-show ()
     "Configure the look and feel when I am not presentating."
     (interactive)
+    (set-frame-width nil 180)
+    (set-frame-height nil 50)
     (cond
      ((find-font (font-spec :name "Menlo"))
-      (set-frame-font "Menlo-12"))
+      (set-frame-font "Menlo-14"))
      ((find-font (font-spec :name "Consolas"))
       (set-frame-font "Consolas-11"))
      ((find-font (font-spec :name "DejaVu Sans Mono"))

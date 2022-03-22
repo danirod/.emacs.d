@@ -223,15 +223,6 @@ it behaves in X.
 
 ** Indentation
 
-If you are in the middle of a comment and you press ENTER, you should
-continue to be in a comment block unless you say so by deleting these
-prefix characters.  This is how it works in other text editors so I am
-used to this.
-
-#+begin_src emacs-lisp
-(define-key global-map (kbd "RET") 'default-indent-new-line)
-#+end_src
-
 * Ergonomics
 
 ** Relative numbers
@@ -285,6 +276,16 @@ is only one or two windows opened, it doesn't matter a lot.
     :bind (("C-x o" . ace-window)))
 #+end_src
 
+However, sometimes this is not enough, and for those use cases there's
+emacs-rotate:
+
+#+begin_src emacs-lisp
+  (use-package rotate
+    :ensure t
+    :bind (("C-|" . rotate-layout))
+    :commands (rotate-layout rotate-window))
+#+end_src
+
 * Application look and feel
 
 ** Graphical environment
@@ -297,7 +298,7 @@ set the font.
 #+begin_src emacs-lisp
   (when window-system
     (tool-bar-mode -1)
-    ; (menu-bar-mode -1)
+    (menu-bar-mode -1)
     (scroll-bar-mode -1))
 #+end_src
 
@@ -327,17 +328,22 @@ use today...
 
 #+begin_src emacs-lisp
   (use-package color-theme-sanityinc-tomorrow
-    :disabled t
     :if window-system
-    :ensure t
-    :config
-    (load-theme 'sanityinc-tomorrow-night t))
-
+    :ensure t)
   (use-package vscode-dark-plus-theme
     :if window-system
-    :ensure t
-    :config
-    (load-theme 'vscode-dark-plus))
+    :ensure t)
+  (use-package darktooth-theme
+    :if window-system
+    :ensure t)
+  (use-package srcery-theme
+    :if window-system
+    :ensure t)
+  (use-package atom-one-dark-theme
+    :if window-system
+    :ensure t)
+
+  (load-theme 'darktooth)
 #+end_src
 
 Make the current line more subtle by highlighting the current line.
@@ -804,3 +810,30 @@ Be nice with RSpec because this is what I use.
            (dired-mode . rspec-dired-mode)))
 #+end_src
 
+** C/C++
+
+Add support for clang-format where available.
+
+#+begin_src emacs-lisp
+  (use-package clang-format
+    :ensure t)
+  (use-package clang-format+
+    :ensure t
+    :hook (c-mode-common . clang-format+-mode))
+#+end_src
+
+* Org2Blog
+
+Org2Blog is a blogging platform that allows to push things to WordPress
+sites using the XML-RPC gateway.  Sounds like a very silly idea, but
+let's configure it.
+
+#+begin_src emacs-lisp
+  (use-package org2blog
+    :ensure t)
+
+  (setq org2blog/wp-blog-alist
+        '(("danirod.es"
+           :url "https://danirod.es/xmlrpc.php"
+           :username "dani")))
+#+end_src

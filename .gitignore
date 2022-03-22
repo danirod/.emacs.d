@@ -9,3 +9,5 @@ transient/history.el
 Config.el
 projectile-bookmarks.eld
 tutorial/*.tut
+url/
+/tramp

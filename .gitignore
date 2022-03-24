@@ -12,3 +12,5 @@ tutorial/*.tut
 url/
 /tramp
 /authinfo.gpg
+/emojis/
+/mastodon.plstore

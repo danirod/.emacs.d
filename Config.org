@@ -59,8 +59,8 @@ of a package.
              ("MELPA Stable" . "https://stable.melpa.org/packages/")
              ("MELPA" . "https://melpa.org/packages/"))
            package-archive-priorities
-           '(("MELPA Stable" . 30)
-             ("MELPA" . 20)
+           '(("MELPA" . 30)
+             ("MELPA Stable" . 20)
              ("GNU ELPA" . 10))
            package-enable-at-startup nil
            package-user-dir (expand-file-name (concat user-emacs-directory "elpa")))
@@ -391,14 +391,17 @@ Make the current line more subtle by highlighting the current line.
   (danirod/stop-show)
 #+end_src
 
-Olivetti is a package for aligning text to center.
+Olivetti is a package for aligning text to center. I'm keeping it here,
+but I am disabling it in the meantime because it is messing a little
+with some things related to text modes.
 
 #+begin_src emacs-lisp
   (use-package olivetti
     :if window-system
     :ensure t
+    :disabled t
     :hook ((text-mode . olivetti-mode)
-	   (org-mode . olivetti-mode)))
+           (org-mode . olivetti-mode)))
 #+end_src
 
 * Things that cannot be explained
@@ -515,6 +518,16 @@ a tool that could even manage your entire life.
     :after org
     :ensure t
     :hook (org-mode . org-bullets-mode))
+#+end_src
+
+** Configuring agenda and capturing
+
+Don't mind me, just following the docs:
+
+#+begin_src emacs-lisp
+  (global-set-key (kbd "C-c l") #'org-store-link)
+  (global-set-key (kbd "C-c a") #'org-agenda)
+  (global-set-key (kbd "C-c c") #'org-capture)
 #+end_src
 
 * EditorConfig
@@ -644,8 +657,7 @@ The main layer is provided by projectile itself.
     :ensure t
     :diminish projectile-mode
     :init
-    (setq projectile-project-search-path '("~/Code" "~/Dev")
-          projectile-switch-project-action 'projectile-dired)
+    (setq projectile-project-search-path '("~/Code" "~/Dev"))
     :config
     (projectile-mode)
     (projectile-add-known-project "~/.emacs.d")
@@ -731,9 +743,8 @@ console or rails server.
 #+begin_src emacs-lisp
   (use-package projectile-rails
     :ensure t
-    :diminish
-    :after projectile
-    :hook ((ruby-mode . projectile-rails-global-mode))
+    ; :diminish
+    :hook (projectile-mode . projectile-rails-global-mode)
     :bind (:map projectile-rails-mode-map
                 ("M-p r" . projectile-rails-command-map)))
 #+end_src
@@ -866,3 +877,25 @@ let's configure it.
              :username ,(car credentials)
              :password ,(cadr credentials)))))
 #+end_src
+
+* Mastodon
+
+A social network similar to Twitter, I usually use the Fosstodon
+instance to read about software and programming news.
+
+#+begin_src emacs-lisp
+  (use-package mastodon
+    :ensure t
+    :config
+    (setq mastodon-instance-url "https://fosstodon.org"
+          mastodon-auth-source-file "~/.emacs.d/authinfo.gpg")
+    :commands (mastodon mastodon-toot))
+#+end_src
+
+These settings will allow it to persist the password in the authinfo.gpg
+file the first time either mastodon or mastodon-toot commands are
+invoked.
+
+NOTE: For some reason the interface for sending toots does not work
+unless C-g is pressed before typing C-c C-c. [[https://github.com/mooseyboots/mastodon.el/issues/227][Related issue]].
+

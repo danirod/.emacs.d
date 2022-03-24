@@ -437,6 +437,26 @@ a nice addition for swag.
 (setq-default fill-column 72)
 #+end_src
 
+* Auth-Source
+
+[[info:auth#Top][auth-source]] is a framework for secretly providing other things in Emacs
+a way to store and retrieve secrets such as passwords, tokens or API
+keys, which can be used, for instance, to read e-mail or login to
+services like IRC chats.
+
+By default, this information is stored in a file called .authinfo, which
+follows the Netrc protocol, described in their docs.  Each line in the
+file will contain some credentials.
+
+However, it would be better if the file could be encrypted so that at
+least there are no plain text files around...
+
+#+begin_src emacs-lisp
+  (setq auth-sources
+        '((:source "~/.emacs.d/authinfo.gpg"
+                   auth-source-debug t)))
+#+end_src
+
 * Treemacs
 
 Treemacs presents a tree similar to NERDTree.
@@ -838,8 +858,11 @@ let's configure it.
   (use-package org2blog
     :ensure t)
 
-  (setq org2blog/wp-blog-alist
-        '(("danirod.es"
-           :url "https://danirod.es/xmlrpc.php"
-           :username "dani")))
+  ;; Read the credentials from the auth-source.
+  (let* ((credentials (auth-source-user-and-password "danirod.es")))
+    (setq org2blog/wp-blog-alist
+          `(("danirod.es"
+             :url "https://danirod.es/xmlrpc.php"
+             :username ,(car credentials)
+             :password ,(cadr credentials)))))
 #+end_src

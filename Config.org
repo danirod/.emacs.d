@@ -186,7 +186,7 @@ can be evaluated.
   (defun danirod/open-config ()
     "Open in a new frame the contents of the emacs.org file"
     (interactive)
-    (find-file-other-frame (expand-file-name "emacs.org" user-emacs-directory)))
+    (find-file-other-frame (expand-file-name "Config.org" user-emacs-directory)))
   (defun danirod/reload-config ()
     "Reloads the init.el dotfiles"
     (interactive)
@@ -292,6 +292,14 @@ emacs-rotate:
     :commands (rotate-layout rotate-window))
 #+end_src
 
+To close a split window, you can use =C-x 4 0=.  It binds by default the
+kill-buffer-and-window command.  It is a good command, but I'd like to
+make it more accessible so that it is easier to use it:
+
+#+begin_src emacs-lisp
+  (global-set-key (kbd "C-x C-k") 'kill-buffer-and-window)
+#+end_src
+
 * Application look and feel
 
 ** Graphical environment
@@ -377,11 +385,11 @@ Make the current line more subtle by highlighting the current line.
   (defun danirod/stop-show ()
     "Configure the look and feel when I am not presentating."
     (interactive)
-    (set-frame-width nil 180)
-    (set-frame-height nil 50)
+    (set-frame-width nil 150)
+    (set-frame-height nil 45)
     (cond
      ((find-font (font-spec :name "Menlo"))
-      (set-frame-font "Menlo-14"))
+      (set-frame-font "Menlo-15"))
      ((find-font (font-spec :name "Consolas"))
       (set-frame-font "Consolas-11"))
      ((find-font (font-spec :name "DejaVu Sans Mono"))
@@ -565,7 +573,7 @@ things like spellchecking.
 
 * LSP
 
-The language server protocol allows to have nice autocompletions,
+The language server prootcol allows to have nice autocompletions,
 refactors and error detections on a lot of programming languages.  It is
 decoupled, so I can take advantage of any other language server written
 for a specific programming language without requiring it to support the
@@ -898,4 +906,3 @@ invoked.
 
 NOTE: For some reason the interface for sending toots does not work
 unless C-g is pressed before typing C-c C-c. [[https://github.com/mooseyboots/mastodon.el/issues/227][Related issue]].
-

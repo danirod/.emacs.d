@@ -322,7 +322,8 @@ use Control and Meta on the keyboard of a MacBook.
 
 #+begin_src emacs-lisp
   (when (eq system-type 'darwin)
-    (menu-bar-mode 1))
+    (menu-bar-mode 1)
+    (add-hook 'after-init-hook (lambda () (toggle-frame-maximized))))
 #+end_src
 
 Also, on a Mac, use menu bar.
@@ -357,7 +358,7 @@ use today...
     :if window-system
     :ensure t)
 
-  (load-theme 'darktooth)
+  (load-theme 'tango-dark)
 #+end_src
 
 Make the current line more subtle by highlighting the current line.
@@ -388,6 +389,8 @@ Make the current line more subtle by highlighting the current line.
     (set-frame-width nil 150)
     (set-frame-height nil 45)
     (cond
+     ((find-font (font-spec :name "JetBrains Mono"))
+      (set-frame-font "JetBrains Mono-15"))
      ((find-font (font-spec :name "Menlo"))
       (set-frame-font "Menlo-15"))
      ((find-font (font-spec :name "Consolas"))
@@ -475,10 +478,12 @@ Treemacs presents a tree similar to NERDTree.
 #+begin_src emacs-lisp
   (use-package treemacs
     :ensure t
-    :bind (("C-c t t" . treemacs)
+    :bind (("C-c t t" . treemacs-select-window)
+           ("C-c t 0" . treemacs-delete-other-windows)
            ("C-c t C-t" . treemacs-find-file))
     :config
-    (setq treemacs-position 'right)
+    (setq treemacs-position 'right
+          treemacs-follow-after-init t)
     (treemacs-resize-icons 16)
     (treemacs-follow-mode t)
     (treemacs-filewatch-mode t))
@@ -496,7 +501,17 @@ at some point.
   (use-package magit
     :ensure t
     :bind (("C-c g" . magit-status)
-           ("C-c M-g" . magit-dispatch)))
+           ("C-c M-g" . magit-dispatch))
+    :config
+    (setq magit-save-repository-buffers nil))
+#+end_src
+
+Support for treemacs:
+
+#+begin_src emacs-lisp
+  (use-package treemacs-magit
+    :ensure t
+    :after (magit treemacs))
 #+end_src
 
 Git Gutters.
@@ -670,7 +685,7 @@ The main layer is provided by projectile itself.
     (projectile-mode)
     (projectile-add-known-project "~/.emacs.d")
     (projectile-add-known-project "~/.dotfiles")
-    :bind-keymap ("M-p" . projectile-command-map))
+    :bind-keymap ("C-c p" . projectile-command-map))
 
   (use-package helm-projectile
     :ensure t
@@ -754,7 +769,7 @@ console or rails server.
     ; :diminish
     :hook (projectile-mode . projectile-rails-global-mode)
     :bind (:map projectile-rails-mode-map
-                ("M-p r" . projectile-rails-command-map)))
+                ("C-c p r" . projectile-rails-command-map)))
 #+end_src
 
 *** rbenv

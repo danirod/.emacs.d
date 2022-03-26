@@ -14,3 +14,6 @@ url/
 /authinfo.gpg
 /emojis/
 /mastodon.plstore
+/.org-id-locations
+/bookmarks
+/org-roam.db

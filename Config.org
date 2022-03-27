@@ -370,35 +370,34 @@ Make the current line more subtle by highlighting the current line.
   For the fonts, let's find some fallbacks depending on the OS.
 
 #+begin_src emacs-lisp
+  (defvar danirod/font-family
+    (seq-find (lambda (f) (find-font (font-spec :name f)))
+              ["Hack" "Menlo" "Consolas" "DejaVu Sans Mono"])
+    "The font family that is going to be used in the system.")
+
+  (defvar danirod/font-size (if (eq system-type 'darwin) 13 10)
+    "The size of the font to be used in the system.")
+
+  (defvar danirod/show-font-size-multiplier 1.75
+    "The increment to give to the font when prsenting.")
+
   (defun danirod/start-show ()
-    "Configure the look and feel when a presentation starts."
+    "Configure the look and feel to enter the presentation mode"
     (interactive)
     (unless (frame-parameter nil 'fullscreen)
       (toggle-frame-maximized))
-    (cond
-     ((find-font (font-spec :name "Menlo"))
-      (set-frame-font "Menlo-20"))
-     ((find-font (font-spec :name "Consolas"))
-      (set-frame-font "Consolas-20"))
-     ((find-font (font-spec :name "DejaVu Sans Mono"))
-      (set-frame-font "DejaVu Sans Mono-20"))))
+    (let* ((large-font (* danirod/font-size danirod/show-font-size-multiplier))
+           (font-size-expr (number-to-string (floor large-font)))
+           (font-string (concat danirod/font-family "-" font-size-expr)))
+      (set-frame-font font-string)))
 
   (defun danirod/stop-show ()
-    "Configure the look and feel when I am not presentating."
+    "Configure the look and feel when I enter the presentation mode."
     (interactive)
-    (set-frame-width nil 150)
-    (set-frame-height nil 45)
-    (cond
-     ((find-font (font-spec :name "JetBrains Mono"))
-      (set-frame-font "JetBrains Mono-15"))
-     ((find-font (font-spec :name "Menlo"))
-      (set-frame-font "Menlo-15"))
-     ((find-font (font-spec :name "Consolas"))
-      (set-frame-font "Consolas-11"))
-     ((find-font (font-spec :name "DejaVu Sans Mono"))
-      (set-frame-font "DejaVu Sans Mono-10"))))
+    (let* ((font-size-spec (number-to-string (floor danirod/font-size))))
+      (set-frame-font (concat danirod/font-family "-" font-size-spec))))
 
-  ;; By default, start in no presentation mode.
+  ;; By default, we are not in presentation mode
   (danirod/stop-show)
 #+end_src
 
@@ -658,6 +657,7 @@ complete things.
   (use-package company
     :ensure t
     :diminish company-mode
+    :bind (("C-c SPC" . company-complete))
     :config
     (global-company-mode))
 #+end_src
@@ -910,11 +910,12 @@ Support for Rust:
     (add-hook 'rust-mode-hook (lambda () (prettify-symbols-mode)))
     :hook (rust-mode . lsp)
     :bind (:map rust-mode-map
-                ("C-c C-c" . rust-run)))
+                ("C-q e r" . rust-run)))
 
   (use-package cargo-mode
     :ensure t
     :hook ((rust-mode . cargo-minor-mode)))
+
 #+end_src
 
 * Org2Blog

@@ -17,3 +17,6 @@ url/
 /.org-id-locations
 /bookmarks
 /org-roam.db
+eshell/history
+eshell/lastdir
+/session.*

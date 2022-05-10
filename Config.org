@@ -191,6 +191,7 @@ can be evaluated.
     "Reloads the init.el dotfiles"
     (interactive)
     (load-file (expand-file-name "init.el" user-emacs-directory)))
+  (defalias 'dconf 'danirod/open-config)
 #+end_src
 
 ** Backup files
@@ -358,7 +359,7 @@ use today...
     :if window-system
     :ensure t)
 
-  (load-theme 'tango-dark)
+  (load-theme 'atom-one-dark)
 #+end_src
 
 Make the current line more subtle by highlighting the current line.
@@ -378,7 +379,7 @@ Make the current line more subtle by highlighting the current line.
   (defvar danirod/font-size (if (eq system-type 'darwin) 13 10)
     "The size of the font to be used in the system.")
 
-  (defvar danirod/show-font-size-multiplier 1.75
+  (defvar danirod/show-font-size-multiplier 2
     "The increment to give to the font when prsenting.")
 
   (defun danirod/start-show ()
@@ -425,6 +426,7 @@ Imagine switching to Emacs just for this...
     :ensure t
     :config
     (nyan-mode)
+    (nyan-start-animation)
     (setq nyan-animate-nyancat t
           nyan-wavy-trail t))
 #+end_src
@@ -542,6 +544,26 @@ a tool that could even manage your entire life.
     :after org
     :ensure t
     :hook (org-mode . org-bullets-mode))
+#+end_src
+
+Org-mode really deserves its own explanations because as I say it is a
+beast on its own.  First, some configuration parameters based on what
+I'm learning in Worg:
+
+#+begin_src emacs-lisp
+  ;; Randomly I'll decide to use a different directory for my Orgs in some
+  ;; file system partitions and another one in another partitions.
+  (setq org-directory
+        (seq-find (lambda (f) (file-directory-p f))
+                  ["~/Org" "~/Documents/Org/"]))
+  (setq org-agenda-files
+        (file-expand-wildcards (concat org-directory "*.org")))
+  (defun danirod/visit-org ()
+    (interactive)
+    (helm-find-files-1 org-directory))
+
+  (defalias 'daniorg 'danirod/visit-org)
+  (global-set-key (kbd "C-c d") 'danirod/visit-org)
 #+end_src
 
 ** Configuring agenda and capturing
@@ -716,6 +738,17 @@ The main layer is provided by projectile itself.
 #+end_src
 
 * Programming languages support
+
+** Web Mode
+
+#+begin_src emacs-lisp
+  (use-package web-mode
+    :ensure t
+    :mode (("\\.html?\\'" . web-mode)
+           ("\\.erb?\\'" . web-mode))
+    :config
+    (setq web-mode-enable-auto-pairing t))
+#+end_src
 
 ** TypeScript
 
@@ -946,9 +979,17 @@ instance to read about software and programming news.
   (use-package mastodon
     :ensure t
     :config
-    (setq mastodon-instance-url "https://fosstodon.org"
-          mastodon-auth-source-file "~/.emacs.d/authinfo.gpg")
+    (setq mastodon-instance-url "https://fosstodon.org")
     :commands (mastodon mastodon-toot))
+
+  (defun mastodon/foss ()
+    (interactive)
+    (setq mastodon-instance-url "https://fosstodon.org")
+    (mastodon))
+  (defun mastodon/madrid ()
+    (interactive)
+    (setq mastodon-instance-url "https://mastodon.madrid")
+    (mastodon))
 #+end_src
 
 These settings will allow it to persist the password in the authinfo.gpg
@@ -989,4 +1030,20 @@ Then, to actually use TinyTinyRSS, I configure elfeed-protocol:
           elfeed-protocol-enabled-protocols '(ttrss)
           elfeed-protocol-ttrss-max-size 200)
     (elfeed-protocol-enable))
+#+end_src
+
+* ERC
+
+To connect to my chat, for instance.
+
+#+begin_src emacs-lisp
+  (defun danirod/join-twitch ()
+    (interactive)
+    ; (add-to-list 'erc-networks-alist '(twitch "irc.twitch.tv"))
+    (erc :server "irc.twitch.tv"
+         :port 6667
+         :nick "danirod_"
+         :password nil))
+  (setq erc-autojoin-channels-alist
+        (quote (("twitch.tv" "#danirod"))))
 #+end_src

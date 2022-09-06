@@ -376,7 +376,7 @@ Make the current line more subtle by highlighting the current line.
               ["Hack" "Menlo" "Consolas" "DejaVu Sans Mono"])
     "The font family that is going to be used in the system.")
 
-  (defvar danirod/font-size (if (eq system-type 'darwin) 13 10)
+  (defvar danirod/font-size (if (eq system-type 'darwin) 14 10)
     "The size of the font to be used in the system.")
 
   (defvar danirod/show-font-size-multiplier 2

@@ -951,25 +951,6 @@ Support for Rust:
 
 #+end_src
 
-* Org2Blog
-
-Org2Blog is a blogging platform that allows to push things to WordPress
-sites using the XML-RPC gateway.  Sounds like a very silly idea, but
-let's configure it.
-
-#+begin_src emacs-lisp
-  (use-package org2blog
-    :ensure t)
-
-  ;; Read the credentials from the auth-source.
-  (let* ((credentials (auth-source-user-and-password "danirod.es")))
-    (setq org2blog/wp-blog-alist
-          `(("danirod.es"
-             :url "https://danirod.es/xmlrpc.php"
-             :username ,(car credentials)
-             :password ,(cadr credentials)))))
-#+end_src
-
 * Mastodon
 
 A social network similar to Twitter, I usually use the Fosstodon

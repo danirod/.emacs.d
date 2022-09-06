@@ -390,7 +390,9 @@ Make the current line more subtle by highlighting the current line.
     (let* ((large-font (* danirod/font-size danirod/show-font-size-multiplier))
            (font-size-expr (number-to-string (floor large-font)))
            (font-string (concat danirod/font-family "-" font-size-expr)))
-      (set-frame-font font-string)))
+      (set-frame-font font-string)
+      (apply 'disable-theme custom-enabled-themes)
+      (load-theme 'vscode-dark-plus)))
 
   (defun danirod/stop-show ()
     "Configure the look and feel when I enter the presentation mode."

@@ -359,7 +359,7 @@ use today...
     :if window-system
     :ensure t)
 
-  (load-theme 'atom-one-dark)
+  (load-theme 'atom-one-dark t)
 #+end_src
 
 Make the current line more subtle by highlighting the current line.
@@ -392,7 +392,7 @@ Make the current line more subtle by highlighting the current line.
            (font-string (concat danirod/font-family "-" font-size-expr)))
       (set-frame-font font-string)
       (apply 'disable-theme custom-enabled-themes)
-      (load-theme 'vscode-dark-plus)))
+      (load-theme 'vscode-dark-plus t)))
 
   (defun danirod/stop-show ()
     "Configure the look and feel when I enter the presentation mode."
@@ -431,20 +431,6 @@ Imagine switching to Emacs just for this...
     (nyan-start-animation)
     (setq nyan-animate-nyancat t
           nyan-wavy-trail t))
-#+end_src
-
-** elcord
-
-elcord uses Discord RPC to push as your game status whatever you are
-editing.  I do not thing this is useful in a work environment but it is
-a nice addition for swag.
-
-#+begin_src emacs-lisp
-  (use-package elcord
-    :ensure t
-    :config
-    (elcord-mode)
-    (setq elcord-quiet t))
 #+end_src
 
 * Text modes
@@ -576,19 +562,6 @@ Don't mind me, just following the docs:
   (global-set-key (kbd "C-c l") #'org-store-link)
   (global-set-key (kbd "C-c a") #'org-agenda)
   (global-set-key (kbd "C-c c") #'org-capture)
-#+end_src
-
-** Org-roam
-
-And then there is org-roam, which seems to be the replacement for
-vimwiki
-
-#+begin_src emacs-lisp
-  (use-package org-roam
-    :ensure t
-    :config
-    (setq org-roam-directory (file-truename "~/Documents/Roam"))
-    (org-roam-db-autosync-mode))
 #+end_src
 
 * EditorConfig
@@ -982,51 +955,4 @@ invoked.
 NOTE: For some reason the interface for sending toots does not work
 unless C-g is pressed before typing C-c C-c. [[https://github.com/mooseyboots/mastodon.el/issues/227][Related issue]].
 
-* Elfeed
 
-*elfeed* is an RSS reader platform for GNU Emacs.  In this section I'll be
-connecting *elfeed* to *elfeed-protocol*, which is an extension for elfeed
-that adds support for additional self-hosted RSS readers (such as
-TinyTinyRSS and many others).
-
-The first thing to do is to actually install elfeed and configure it,
-however I will not be adding local feeds.
-
-#+begin_src emacs-lisp
-  (use-package elfeed
-    :ensure t
-    :commands elfeed
-    :config
-    (setq elfeed-use-curl t))
-#+end_src
-
-Then, to actually use TinyTinyRSS, I configure elfeed-protocol:
-
-#+begin_src emacs-lisp
-  (use-package elfeed-protocol
-    :ensure t
-    :config
-    (elfeed-set-timeout 36000)
-    (setq elfeed-feeds '(
-                         ("ttrss+https://dani@reader.danirod.es/tt-rss"
-                          :use-authinfo t))
-          elfeed-protocol-enabled-protocols '(ttrss)
-          elfeed-protocol-ttrss-max-size 200)
-    (elfeed-protocol-enable))
-#+end_src
-
-* ERC
-
-To connect to my chat, for instance.
-
-#+begin_src emacs-lisp
-  (defun danirod/join-twitch ()
-    (interactive)
-    ; (add-to-list 'erc-networks-alist '(twitch "irc.twitch.tv"))
-    (erc :server "irc.twitch.tv"
-         :port 6667
-         :nick "danirod_"
-         :password nil))
-  (setq erc-autojoin-channels-alist
-        (quote (("twitch.tv" "#danirod"))))
-#+end_src
